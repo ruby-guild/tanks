@@ -3,4 +3,4 @@
 #= require_tree .
 
 $ ->
-  App.WebGL.init
+  App.init()
