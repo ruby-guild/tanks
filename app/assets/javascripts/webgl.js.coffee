@@ -15,22 +15,28 @@
     shader_fs:
       type: 'x-shader/x-fragment'
       source: "
-        precision mediump float;
+        varying highp vec2 vTextureCoord;
+
+        uniform sampler2D uSampler;
 
         void main(void) {
-            gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+          gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
         }
       "
     shader_vs:
       type: 'x-shader/x-vertex'
       source: "
         attribute vec3 aVertexPosition;
+        attribute vec2 aTextureCoord;
 
         uniform mat4 uMVMatrix;
         uniform mat4 uPMatrix;
 
+        varying highp vec2 vTextureCoord;
+
         void main(void) {
-            gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+          gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+          vTextureCoord = aTextureCoord;
         }
       "
 
@@ -114,8 +120,12 @@
     @shaderProgram.vertexPositionAttribute = @gl.getAttribLocation @shaderProgram, "aVertexPosition"
     @gl.enableVertexAttribArray @shaderProgram.vertexPositionAttribute
 
+    @shaderProgram.textureCoordAttribute = @gl.getAttribLocation @shaderProgram, "aTextureCoord"
+    @gl.enableVertexAttribArray @shaderProgram.textureCoordAttribute
+
     @shaderProgram.pMatrixUniform = @gl.getUniformLocation @shaderProgram, "uPMatrix"
     @shaderProgram.mvMatrixUniform = @gl.getUniformLocation @shaderProgram, "uMVMatrix"
+    @shaderProgram.samplerUniform = @gl.getUniformLocation @shaderProgram, "uSampler"
 
   drawScene: ->
     @initShaders()
@@ -145,10 +155,19 @@
     @gl.bindBuffer @gl.ARRAY_BUFFER, obj.vertexBuffer
     @gl.vertexAttribPointer @shaderProgram.vertexPositionAttribute, obj.vertexBuffer.itemSize, @gl.FLOAT, false, 0, 0
 
+    @gl.bindBuffer @gl.ARRAY_BUFFER, obj.textureBuffer
+    @gl.vertexAttribPointer @shaderProgram.textureCoordAttribute, obj.textureBuffer.itemSize, @gl.FLOAT, false, 0, 0
+
+    @gl.activeTexture @gl.TEXTURE0
+    @gl.bindTexture @gl.TEXTURE_2D, obj.texture
+    @gl.uniform1i @gl.getUniformLocation(@shaderProgram, "uSampler"), 0
+
+    @gl.bindBuffer @gl.ELEMENT_ARRAY_BUFFER, obj.indexBuffer
+
     @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, @pMatrix
     @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, @mvMatrix
 
-    @gl.drawArrays @gl.TRIANGLES, 0, obj.vertexBuffer.numItems
+    @gl.drawElements @gl.TRIANGLES, obj.indexBuffer.numItems, @gl.UNSIGNED_SHORT, 0
 
     @mvPopMatrix()
 
