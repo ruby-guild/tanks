@@ -6,11 +6,17 @@ class Game::Engine
   end
 
   def add_player(name)
-    @players << Game::Player.new(name)
+    player = Game::Player.new(name)
+    @players << player
+    player.id
   end
 
   def current_state
     {players: @players, objects: nil}
   end
 
+  def change_state(action)
+    player = @players.find {|p| p.id == action[:id]}
+    player.do_command(action[:command])
+  end
 end
