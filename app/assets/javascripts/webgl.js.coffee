@@ -1,6 +1,14 @@
 @App.WebGL =
   gl: null
   shaderProgram: null
+  pressedKeys: {}
+
+  mvMatrix: mat4.create()
+  pMatrix: mat4.create()
+  mvMatrixStack: []
+
+  position: [0.0, 0.0]
+  angle: 0
 
   shaders:
     shader_fs:
@@ -37,7 +45,26 @@
     if !@gl
       alert "Could not initialise WebGL"
 
+    that = @
+    $(document).keydown (event) ->
+      that.handleKeyDown(event)
+
+    $(document).keyup (event) ->
+      that.handleKeyUp(event)
+
     @renderFrame()
+
+  mvPushMatrix: ->
+    copy = mat4.create()
+    mat4.set @mvMatrix, copy
+    @mvMatrixStack.push copy
+
+  mvPopMatrix: ->
+    throw "Invalid popMatrix!" if @mvMatrixStack.length == 0
+    @mvMatrix = @mvMatrixStack.pop()
+
+  degToRad: (degrees) ->
+    degrees * Math.PI / 180
 
   getShader: (name) ->
     shader_script = @shaders[name]
@@ -83,9 +110,12 @@
     @gl.bindBuffer @gl.ARRAY_BUFFER, triangleVertexPositionBuffer
 
     vertices = [
-      0.0,  1.0,  0.0,
-      -1.0, -1.0,  0.0,
-      1.0, -1.0,  0.0
+#      0.0,  1.0,  0.0,
+#      -1.0, -1.0,  0.0,
+#      1.0, -1.0,  0.0
+      -0.5, -0.5,  0.0,
+      -0.5, 0.5,  0.0,
+      0.5, 0.0, 0.0
     ]
 
     @gl.bufferData @gl.ARRAY_BUFFER, new Float32Array(vertices), @gl.STATIC_DRAW
@@ -94,9 +124,9 @@
 
     [triangleVertexPositionBuffer]
 
-  setMatrixUniforms: (pMatrix, mvMatrix)->
-    @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, pMatrix
-    @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, mvMatrix
+#  setMatrixUniforms: ->
+#    @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, @pMatrix
+#    @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, @mvMatrix
 
   drawScene: ->
     @initShaders()
@@ -107,21 +137,52 @@
     @gl.clearColor 0.0, 0.0, 0.0, 1.0
     @gl.enable @gl.DEPTH_TEST
 
-    pMatrix = mat4.create()
-    mvMatrix = mat4.create()
-
     @gl.viewport 0, 0, @gl.viewportWidth, @gl.viewportHeight
     @gl.clear @gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT
 
-    mat4.perspective 45, @gl.viewportWidth / @gl.viewportHeight, 0.1, 100.0, pMatrix
-    mat4.identity mvMatrix
+    mat4.perspective 45, @gl.viewportWidth / @gl.viewportHeight, 0.1, 100.0, @pMatrix
+    mat4.identity @mvMatrix
 
-    mat4.translate mvMatrix, [0.0, 0.0, -15.0]
+    # new magic with keys here
+    #mat4.translate(mvMatrix, [0.0, 0.0, 0.0]);
+    mat4.translate @mvMatrix, [@position[0], @position[1], -15.0]
+    mat4.rotate @mvMatrix, @degToRad(@angle), [0, 0, 1] # x axis rotation
+
+    #mat4.translate @mvMatrix, [0.0, 0.0, -15.0]
     @gl.bindBuffer @gl.ARRAY_BUFFER, triangleVertexPositionBuffer
     @gl.vertexAttribPointer @shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, @gl.FLOAT, false, 0, 0
-    @setMatrixUniforms pMatrix, mvMatrix
+
+    #@setMatrixUniforms
+    @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, @pMatrix
+    @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, @mvMatrix
+
     @gl.drawArrays @gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems
 
   renderFrame: ->
-    App.WebGL.drawScene()
-    requestAnimFrame App.WebGL.renderFrame
+    that = @
+    requestAnimFrame -> that.renderFrame()
+    @handleKeys()
+    @drawScene()
+
+  handleKeyDown: (event) ->
+    @pressedKeys[event.keyCode] = true
+    return
+
+  handleKeyUp: (event) ->
+    delete @pressedKeys[event.keyCode] if @pressedKeys && @pressedKeys[event.keyCode]
+    return
+
+  handleKeys: ->
+    distance = 0.1
+    #z -= 0.05 if @pressedKeys[32] # fire (space)
+
+    @angle += 5 if @pressedKeys[37] # left
+    @angle -= 5 if @pressedKeys[39] # right
+    if @pressedKeys[38] # up
+      x = distance * Math.cos(@degToRad(@angle)) + @position[0]
+      y = distance * Math.sin(@degToRad(@angle)) + @position[1]
+      @position = [x, y]
+    if @pressedKeys[40] # down
+      x = - distance * Math.cos(@degToRad(@angle)) + @position[0]
+      y = - distance * Math.sin(@degToRad(@angle)) + @position[1]
+      @position = [x, y]
