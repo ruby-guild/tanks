@@ -11,3 +11,8 @@ end
 gem 'jquery-rails'
 gem 'haml'
 gem 'em-websocket'
+
+group :test do
+  gem 'rspec-rails'
+end
+
