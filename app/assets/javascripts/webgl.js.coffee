@@ -7,8 +7,9 @@
   pMatrix: mat4.create()
   mvMatrixStack: []
 
-  position: [0.0, 0.0]
-  angle: 0
+  objects: []
+
+  controlled_object_index: 0
 
   shaders:
     shader_fs:
@@ -52,7 +53,18 @@
     $(document).keyup (event) ->
       that.handleKeyUp(event)
 
+    @addObject(new App.classes.GameObject(@gl))
+    obj2 = new App.classes.GameObject(@gl)
+    obj2.move [2, 2], 30
+    @addObject(obj2)
+    obj3 = new App.classes.GameObject(@gl)
+    obj3.move [-3, -5], 75
+    @addObject(obj3)
+
     @renderFrame()
+
+  addObject: (obj) ->
+    @objects.push obj
 
   mvPushMatrix: ->
     copy = mat4.create()
@@ -105,37 +117,14 @@
     @shaderProgram.pMatrixUniform = @gl.getUniformLocation @shaderProgram, "uPMatrix"
     @shaderProgram.mvMatrixUniform = @gl.getUniformLocation @shaderProgram, "uMVMatrix"
 
-  initBuffers: ->
-    triangleVertexPositionBuffer = @gl.createBuffer()
-    @gl.bindBuffer @gl.ARRAY_BUFFER, triangleVertexPositionBuffer
-
-    vertices = [
-#      0.0,  1.0,  0.0,
-#      -1.0, -1.0,  0.0,
-#      1.0, -1.0,  0.0
-      -0.5, -0.5,  0.0,
-      -0.5, 0.5,  0.0,
-      0.5, 0.0, 0.0
-    ]
-
-    @gl.bufferData @gl.ARRAY_BUFFER, new Float32Array(vertices), @gl.STATIC_DRAW
-    triangleVertexPositionBuffer.itemSize = 3
-    triangleVertexPositionBuffer.numItems = 3
-
-    [triangleVertexPositionBuffer]
-
-#  setMatrixUniforms: ->
-#    @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, @pMatrix
-#    @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, @mvMatrix
-
   drawScene: ->
     @initShaders()
 
-    buffers = @initBuffers()
-    triangleVertexPositionBuffer = buffers[0]
-
     @gl.clearColor 0.0, 0.0, 0.0, 1.0
     @gl.enable @gl.DEPTH_TEST
+
+    @gl.blendFunc @gl.SRC_ALPHA, @gl.ONE
+    @gl.enable @gl.BLEND
 
     @gl.viewport 0, 0, @gl.viewportWidth, @gl.viewportHeight
     @gl.clear @gl.COLOR_BUFFER_BIT | @gl.DEPTH_BUFFER_BIT
@@ -143,20 +132,25 @@
     mat4.perspective 45, @gl.viewportWidth / @gl.viewportHeight, 0.1, 100.0, @pMatrix
     mat4.identity @mvMatrix
 
-    # new magic with keys here
-    #mat4.translate(mvMatrix, [0.0, 0.0, 0.0]);
-    mat4.translate @mvMatrix, [@position[0], @position[1], -15.0]
-    mat4.rotate @mvMatrix, @degToRad(@angle), [0, 0, 1] # x axis rotation
+    mat4.translate @mvMatrix, [0, 0, -15] # initial translation
 
-    #mat4.translate @mvMatrix, [0.0, 0.0, -15.0]
-    @gl.bindBuffer @gl.ARRAY_BUFFER, triangleVertexPositionBuffer
-    @gl.vertexAttribPointer @shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, @gl.FLOAT, false, 0, 0
+    @drawObject(obj) for obj in @objects
 
-    #@setMatrixUniforms
+  drawObject: (obj) ->
+    @mvPushMatrix()
+
+    mat4.translate @mvMatrix, [obj.position[0], obj.position[1], 0]
+    mat4.rotate @mvMatrix, @degToRad(obj.angle), [0, 0, 1] # z axis rotation
+
+    @gl.bindBuffer @gl.ARRAY_BUFFER, obj.vertexBuffer
+    @gl.vertexAttribPointer @shaderProgram.vertexPositionAttribute, obj.vertexBuffer.itemSize, @gl.FLOAT, false, 0, 0
+
     @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, @pMatrix
     @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, @mvMatrix
 
-    @gl.drawArrays @gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems
+    @gl.drawArrays @gl.TRIANGLES, 0, obj.vertexBuffer.numItems
+
+    @mvPopMatrix()
 
   renderFrame: ->
     that = @
@@ -164,25 +158,33 @@
     @handleKeys()
     @drawScene()
 
+  playerObject: ->
+    @objects[@controlled_object_index]
+
   handleKeyDown: (event) ->
     @pressedKeys[event.keyCode] = true
-    return
 
   handleKeyUp: (event) ->
     delete @pressedKeys[event.keyCode] if @pressedKeys && @pressedKeys[event.keyCode]
-    return
 
   handleKeys: ->
+    return if !(@pressedKeys[37] || @pressedKeys[38] || @pressedKeys[39] || @pressedKeys[40])
+
+    position = @playerObject().position
+    angle = @playerObject().angle
+
     distance = 0.1
     #z -= 0.05 if @pressedKeys[32] # fire (space)
 
-    @angle += 5 if @pressedKeys[37] # left
-    @angle -= 5 if @pressedKeys[39] # right
+    angle += 5 if @pressedKeys[37] # left
+    angle -= 5 if @pressedKeys[39] # right
     if @pressedKeys[38] # up
-      x = distance * Math.cos(@degToRad(@angle)) + @position[0]
-      y = distance * Math.sin(@degToRad(@angle)) + @position[1]
-      @position = [x, y]
+      x = distance * Math.cos(@degToRad(angle)) + position[0]
+      y = distance * Math.sin(@degToRad(angle)) + position[1]
+      position = [x, y]
     if @pressedKeys[40] # down
-      x = - distance * Math.cos(@degToRad(@angle)) + @position[0]
-      y = - distance * Math.sin(@degToRad(@angle)) + @position[1]
-      @position = [x, y]
+      x = - distance * Math.cos(@degToRad(angle)) + position[0]
+      y = - distance * Math.sin(@degToRad(angle)) + position[1]
+      position = [x, y]
+
+    @playerObject().move(position, angle)

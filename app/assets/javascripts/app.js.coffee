@@ -3,3 +3,4 @@
   init: ->
     App.WebGL.init $('#game-canvas')[0]
 
+  classes: {}
