@@ -10,3 +10,4 @@ end
 
 gem 'jquery-rails'
 gem 'haml'
+gem 'em-websocket'
