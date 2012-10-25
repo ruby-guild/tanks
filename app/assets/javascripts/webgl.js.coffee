@@ -9,7 +9,7 @@
         precision mediump float;
 
         void main(void) {
-            gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+            gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
         }
       "
     shader_vs:
@@ -37,7 +37,7 @@
     if !@gl
       alert "Could not initialise WebGL"
 
-    @drawScene()
+    @renderFrame()
 
   getShader: (name) ->
     shader_script = @shaders[name]
@@ -98,7 +98,6 @@
     @gl.uniformMatrix4fv @shaderProgram.pMatrixUniform, false, pMatrix
     @gl.uniformMatrix4fv @shaderProgram.mvMatrixUniform, false, mvMatrix
 
-
   drawScene: ->
     @initShaders()
 
@@ -122,3 +121,7 @@
     @gl.vertexAttribPointer @shaderProgram.vertexPositionAttribute, triangleVertexPositionBuffer.itemSize, @gl.FLOAT, false, 0, 0
     @setMatrixUniforms pMatrix, mvMatrix
     @gl.drawArrays @gl.TRIANGLES, 0, triangleVertexPositionBuffer.numItems
+
+  renderFrame: ->
+    App.WebGL.drawScene()
+    requestAnimFrame App.WebGL.renderFrame
