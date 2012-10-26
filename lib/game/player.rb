@@ -1,5 +1,6 @@
 class Game::Player
   DISTANCE = 0.1
+  ANGLE = 0.01
   attr_reader :position
   attr_reader :direction
   attr_reader :id
