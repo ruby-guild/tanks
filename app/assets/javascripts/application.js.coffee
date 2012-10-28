@@ -1,7 +1,8 @@
 #= require jquery
 #= require jquery_ujs
-#= require gl-matrix-min
-#= require webgl-utils
+#= require three.min
+#= require ColladaLoader
+#= require THREEx.KeyboardState
 #= require_tree .
 
 $ ->
