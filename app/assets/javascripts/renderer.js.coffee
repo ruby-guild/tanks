@@ -98,7 +98,7 @@
     mesh = new THREE.Mesh object, material
     mesh.position.set position[0], position[1], position[2]
     mesh.rotation.y = rotation if rotation
-    mesh.scale.set 10, 10, 10
+    mesh.scale.set 7, 7, 7
     mesh.rotation.x = Math.PI / 2
     @scene.add mesh
     mesh
