@@ -16,7 +16,7 @@
 
     @scene = new THREE.Scene()
 
-    @camera = new THREE.PerspectiveCamera 75, window.innerWidth / window.innerHeight, 1, 1000
+    @camera = new THREE.PerspectiveCamera 90, window.innerWidth / window.innerHeight, 1, 1000
     @camera.position.z = 400
     @camera.position.x = 0
     @camera.position.y = 0
@@ -76,29 +76,28 @@
     @scene.add floor
 
     #texture
-    texture = THREE.ImageUtils.loadTexture '/assets/models/tank.jpg', {}, ->
-      that.render()
-    texture.anisotropy = @renderer.getMaxAnisotropy()
+    #texture = THREE.ImageUtils.loadTexture '/assets/models/tank.jpg', {}, ->
+    #  that.render()
+    #texture.anisotropy = @renderer.getMaxAnisotropy()
 
     # model
     loader = new THREE.JSONLoader()
     loader.load '/assets/models/tank.json', (model) ->
-      that.addGameObject 0, model, texture, [0, 0, 50] #current player
-      that.addGameObject 1, model, texture, [300, -180, 50], -Math.PI / 2 #dummy
-      that.addGameObject 1, model, texture, [-200, 200, 50], Math.PI / 3 #dummy
+      that.addGameObject 0, model, [0, 0, 50] #current player
+      that.addGameObject 1, model, [300, -180, 50], -Math.PI / 2 #dummy
+      that.addGameObject 1, model, [-200, 200, 50], Math.PI / 3 #dummy
       return
 
     return
 
-  addGameObject: (id, obj, texture, position, rotation) ->
-    @objects[id] = @addModelToScene obj, texture, position, rotation
+  addGameObject: (id, obj, position, rotation) ->
+    @objects[id] = @addModelToScene obj, position, rotation
 
-  addModelToScene: (object, texture, position, rotation) ->
-    material = new THREE.MeshLambertMaterial(if texture then map: texture else color: 0x00ff00)
-    mesh = new THREE.Mesh object, material
+  addModelToScene: (object, position, rotation) ->
+    mesh = new THREE.Mesh object, new THREE.MeshFaceMaterial()
     mesh.position.set position[0], position[1], position[2]
     mesh.rotation.y = rotation if rotation
-    mesh.scale.set 7, 7, 7
+    #mesh.scale.set 7, 7, 7
     mesh.rotation.x = Math.PI / 2
     @scene.add mesh
     mesh
